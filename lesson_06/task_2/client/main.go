@@ -2,69 +2,65 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"net"
 	"os"
 	"strings"
+	"time"
 )
 
-type Member struct {
-	Value string `json:"value"`
-}
-
-func MakeRequest(serverURL string, v string) error {
-	z := Member{Value: v}
-	json_data, err := json.Marshal(z)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(
-		serverURL,
-		"application/json",
-		bytes.NewBuffer(json_data),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var dat Member
-
-	if err := json.Unmarshal(respBody, &dat); err != nil {
-		return err
-	}
-
-	fmt.Println(dat.Value)
-
-	return nil
-}
-
 func main() {
-	const serverURL = "http://localhost:8081/x2"
-	const port = 8081
-
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Simple Shell")
 
 	for {
-		fmt.Print("-> ")
+		fmt.Print("Input number-> ")
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
 
-		err := MakeRequest(serverURL, text)
+		err := MakeRequest(text)
 		if err != nil {
 			panic(err)
 		}
 	}
+}
+
+func MakeRequest(message string) error {
+	// create a dialer
+	var d net.Dialer
+
+	// server port number
+	const port = 8081
+
+	// message - removes '\n' for logging
+	fmt.Printf("Sending message: %s; to port: %d\n", message, port)
+
+	// create call context that should close when timeout reached
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	// call cancel function to context when we end with our tasks
+	defer cancel()
+
+	// connect to server with context
+	conn, err := d.DialContext(ctx, "tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return err
+	}
+	// call close to connection when we end with our tasks
+	defer conn.Close()
+
+	// send some data to server
+	_, err = conn.Write([]byte(message + "\n"))
+	if err != nil {
+		return err
+	}
+
+	// create buffer and read message from server
+	getMessage, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Message recieved: %s\n", getMessage[:len(getMessage)-1])
+	return nil
 }

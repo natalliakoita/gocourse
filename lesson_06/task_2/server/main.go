@@ -1,55 +1,68 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
+	"bufio"
+	"fmt"
+	"log"
+	"net"
 	"strconv"
 	"strings"
 )
 
-type Member struct {
-	Value string `json:"value"`
-}
-
-func HandlerX2(w http.ResponseWriter, req *http.Request) {
-	reqBody, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var dat Member
-
-	if err := json.Unmarshal(reqBody, &dat); err != nil {
-		panic(err)
-	}
-	var result Member
-
-	b, err := strconv.Atoi(dat.Value)
-	if err != nil {
-		c := strings.ToUpper(dat.Value)
-		result.Value = c
-	} else {
-		x := b * 2
-		s := strconv.Itoa(x)
-		result.Value = s
-	}
-
-	js, err := json.Marshal(result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
-}
-
 func main() {
-	http.HandleFunc("/x2", HandlerX2)
+	// server port number
+	const port = 8081
 
-	err := http.ListenAndServe(":8081", nil)
+	fmt.Printf("Launching server on port: %d \n\n", port)
+
+	// create listener
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		panic(err)
+		// log error and exit with error code
+		log.Fatal(err)
+	}
+
+	// endless loop for listening connections
+	for {
+		// accept new connection
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+		// serve connection
+		go func(c net.Conn) {
+			// call close function after serving
+			defer c.Close()
+
+			// read string from client(string should end with '\n' symbol)
+			message, err := bufio.NewReader(c).ReadString('\n')
+			if err != nil {
+				log.Print(err)
+				return
+			}
+
+			fmt.Printf("Message received: %s \n", message)
+
+			var result []byte
+
+			msg := strings.TrimSpace(message)
+			b, err := strconv.Atoi(msg)
+			if err != nil {
+				c := strings.ToUpper(msg)
+				result = []byte(c + "\n")
+			} else {
+				x := b * 2
+				s := strconv.Itoa(x)
+				result = []byte(s + "\n")
+			}
+
+			// write message back(appends with '\n', because it deleted in previous step)
+			_, err = c.Write(result)
+			if err != nil {
+				log.Print(err)
+				return
+			}
+		}(conn)
 	}
 }
