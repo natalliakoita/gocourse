@@ -7,9 +7,11 @@
 </head>
 
 <body>
-    {{if .Cookie}}
     <div>Known token: <span id="known-token"></span>
         {{.Cookie}}
+    </div>
+    {{if .Cookie}}
+    <div>
     </div>
     {{else}}
     <div>
