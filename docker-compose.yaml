@@ -1,0 +1,18 @@
+version: "3.3"
+services:
+    create_token:    
+        build: .
+        image: natalliakoita/create_token:v1
+        ports:
+            - "8083:8083"
+        networks:
+            - webnet
+    save_token:
+        build: .
+        image: natalliakoita/save_token:v1
+        ports:
+            - "8080:8080"
+        networks:
+            - webnet
+networks:
+    webnet:
