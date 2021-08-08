@@ -10,14 +10,8 @@ import (
 func requestInfo(w http.ResponseWriter, req *http.Request) {
 	var ins response
 
-	m := make(map[string][]string)
-
-	for i, header := range req.Header {
-		m[i] = header
-	}
-
 	ins.Host = req.Host
-	ins.Headers = m
+	ins.Headers = req.Header
 	ins.RequestURI = req.RequestURI
 	ins.UserAgent = req.Header["User-Agent"][0]
 
@@ -34,7 +28,7 @@ type response struct {
 	Host       string `json:"host"`
 	UserAgent  string `json:"user_agent"`
 	RequestURI string `json:"request_uri"`
-	Headers    map[string][]string
+	Headers    http.Header
 }
 
 func main() {
