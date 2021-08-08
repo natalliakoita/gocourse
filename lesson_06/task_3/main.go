@@ -52,7 +52,7 @@ func handlerCookie(w http.ResponseWriter, r *http.Request) {
 		}
 		name := r.FormValue("name")
 		address := r.FormValue("address")
-		// place time 2 minutes
+		// place time 2 minets
 		expiration := time.Now().Add(120 * time.Second)
 		// set cookie
 		cookie := http.Cookie{Name: name, Value: address, Expires: expiration}
