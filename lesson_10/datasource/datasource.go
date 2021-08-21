@@ -54,13 +54,11 @@ func NewDS(conn *mongo.Client) DS {
 func (ds *DS) AddContact(ctx context.Context, name, number string) error {
 	collection := ds.DB.Database(database).Collection(collCont)
 	t := Contact{}
-	if err := ds.DB.Database(database).Collection(collCont).FindOne(ctx, bson.M{"name": name, "number": number}).Decode(&t); err == nil {
+	if err := collection.FindOne(ctx, bson.M{"name": name, "number": number}).Decode(&t); err == nil {
 		err1 := errors.New("Duplicates forbidden")
 		return err1
 	}
-	var c Contact
-	c.Name = name
-	c.Number = number
+	c := Contact {Name: name, Number: number}
 	_, err := collection.InsertOne(ctx, c)
 	if err != nil {
 		return err
@@ -110,18 +108,18 @@ func (ds *DS) AddGroupToContact(ctx context.Context, name, number string, group_
 }
 
 // get contact by group
-func (ds *DS) GetContactsOrderByGroup(ctx context.Context) ([]ContactGroup, error) {
+func (ds *DS) GetContactsOrderByGroup(ctx context.Context) ([]*ContactGroup, error) {
 	lookupStage := bson.D{{"$lookup", bson.D{{"from", collGr}, {"localField", "group_id"}, {"foreignField", "_id"}, {"as", "group_id"}}}}
 	unwindStage := bson.D{{"$unwind", bson.D{{"path", "$group_id"}, {"preserveNullAndEmptyArrays", false}}}}
 
 	showLoadedCursor, err := ds.DB.Database(database).Collection(collCont).Aggregate(ctx, mongo.Pipeline{lookupStage, unwindStage})
 	if err != nil {
-		return []ContactGroup{}, err
+		return nil, err
 	}
 
-	var contacts []ContactGroup
+	var contacts []*ContactGroup
 	if err = showLoadedCursor.All(ctx, &contacts); err != nil {
-		return []ContactGroup{}, err
+		return nil, err
 	}
 	return contacts, nil
 }
